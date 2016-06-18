@@ -2,26 +2,28 @@ part of stagexl.media;
 
 class SoundMixer {
 
-  static String _engine;
-  static String _engineOverride;
+  static SoundEngine _engineDetected;
+  static SoundEngine _engineOverride;
+  static SoundTransform _soundTransform = new SoundTransform();
 
   static WebAudioApiMixer _webAudioApiMixer;
   static AudioElementMixer _audioElementMixer;
 
-  static SoundTransform _soundTransform = new SoundTransform();
-
   //---------------------------------------------------------------------------
 
-  static String get engine {
+  /// Get or set the [SoundEngine] that is used to load and play sounds.
+  ///
+  /// The engine is automatically detected based on the best engine supported
+  /// by the browser. It is possible to override the detected engine with a
+  /// different one. Setting the engine to `null` will switch back to the
+  /// automatically detected engine.
+
+  static SoundEngine get engine {
     _initEngine();
-    return _engine;
+    return _engineOverride ?? _engineDetected;
   }
 
-  /// Overrides audio engine detection logic with given value.  Valid values can be found in [SoundEngines]
-  static set engine(String value)
-  {
-    if(_engine != null || value == null) return;
-
+  static set engine(SoundEngine value) {
     _engineOverride = value;
     _initEngine();
   }
@@ -33,17 +35,10 @@ class SoundMixer {
   }
 
   static set soundTransform(SoundTransform value) {
-
     _initEngine();
-    _soundTransform =  value != null ? value : new SoundTransform();
-
-    if (_webAudioApiMixer != null) {
-      _webAudioApiMixer.applySoundTransform(_soundTransform);
-    }
-
-    if (_audioElementMixer != null) {
-      _audioElementMixer.applySoundTransform(_soundTransform);
-    }
+    _soundTransform = value ?? new SoundTransform();
+    _webAudioApiMixer?.applySoundTransform(_soundTransform);
+    _audioElementMixer?.applySoundTransform(_soundTransform);
   }
 
   //---------------------------------------------------------------------------
@@ -59,7 +54,7 @@ class SoundMixer {
   ///     });
 
   static void unlockMobileAudio() {
-    if (engine == SoundEngines.WebAudioApi) {
+    if (engine == SoundEngine.WebAudioApi) {
       try {
         var context = WebAudioApiMixer.audioContext;
         var source = context.createBufferSource();
@@ -77,59 +72,35 @@ class SoundMixer {
 
   static void _initEngine() {
 
-    if (_engine != null) {
-      return;
-    }
+    if (_engineDetected != null) return;
 
-    _engine = SoundEngines.AudioElement;
+    _engineDetected = SoundEngine.AudioElement;
     _audioElementMixer = new AudioElementMixer();
 
-    if(_engineOverride != null)
-    {
-      if(_engineOverride != SoundEngines.AudioElement)
-      {
-        _engine = _engineOverride;
-
-        switch(_engine)
-        {
-          case SoundEngines.WebAudioApi:
-            _webAudioApiMixer = new WebAudioApiMixer();
-            break;
-
-          case SoundEngines.AudioElement:
-          default:
-            // do nothing;
-            break;
-        }
-      }
-    }
-    else
-    {
-      if (AudioContext.supported) {
-        _engine = SoundEngines.WebAudioApi;
-        _webAudioApiMixer = new WebAudioApiMixer();
-      }
+    if (AudioContext.supported) {
+      _engineDetected = SoundEngine.WebAudioApi;
+      _webAudioApiMixer = new WebAudioApiMixer();
     }
 
     var ua = html.window.navigator.userAgent;
 
     if (ua.contains("IEMobile")) {
       if (ua.contains("9.0")) {
-        _engine = "Mock";
+        _engineDetected = SoundEngine.Mockup;
       }
     }
 
     if (ua.contains("iPhone") || ua.contains("iPad") || ua.contains("iPod")) {
       if (ua.contains("OS 3") || ua.contains("OS 4") || ua.contains("OS 5")) {
-        _engine = "Mock";
+        _engineDetected = SoundEngine.Mockup;
       }
     }
 
     if (AudioLoader.supportedTypes.length == 0) {
-      _engine = "Mock";
+      _engineDetected = SoundEngine.Mockup;
     }
 
-    print("StageXL audio engine  : $engine");
+    print("StageXL sound engine  : $engine");
   }
 
 }

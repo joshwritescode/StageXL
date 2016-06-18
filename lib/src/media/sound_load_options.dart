@@ -49,9 +49,9 @@ class SoundLoadOptions {
 
   bool corsEnabled = false;
 
-  /// Bypass the audio engine detection logic to use a specific audio engine.
+  /// Ignore the [SoundMixer.engine] and use this sound engine instead.
 
-  String soundEngine;
+  SoundEngine engine;
 
   //---------------------------------------------------------------------------
 
@@ -66,7 +66,7 @@ class SoundLoadOptions {
     options.opus = this.opus;
     options.ac3 = this.ac3;
     options.wav = this.wav;
-    options.soundEngine = this.soundEngine;
+    options.engine = this.engine;
     options.alternativeUrls = urls == null ? null : urls.toList();
     options.ignoreErrors = this.ignoreErrors;
     options.corsEnabled = this.corsEnabled;
